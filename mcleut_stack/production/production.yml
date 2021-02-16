@@ -5,79 +5,194 @@ secrets:
     external: true
   portainer_admin-password:
     external: true
+  traefik_cf-dns-api-token:
+    external: true
+  traefik_cf-zone-api-token:
+    external: true
 
 services:
+  0bin:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.0bin.middlewares=redirectscheme
+      - traefik.http.routers.0bin.rule=Host(`0bin.mcleut.de`)
+      - traefik.http.routers.0bin_secure.rule=Host(`0bin.mcleut.de`)
+      - traefik.http.services.0bin.loadbalancer.server.port=80
+#      - traefik.http.routers.0bin_secure.middlewares=auth
+      - traefik.http.routers.0bin_secure.tls.certresolver=default
+    image: gabe565/0bin:latest
+    volumes:
+    - /production/0bin_data:/data     
+
   adminer:
     deploy:
       labels:
       - traefik.enable=true
       - traefik.http.routers.adminer.middlewares=redirectscheme
-      - traefik.http.routers.adminer.rule=Host(`adminer.mcleut.ryzen`)
-      - traefik.http.routers.adminer_secure.rule=Host(`adminer.mcleut.ryzen`)
+      - traefik.http.routers.adminer.rule=Host(`adminer.mcleut.de`)
+      - traefik.http.routers.adminer_secure.rule=Host(`adminer.mcleut.de`)
       - traefik.http.services.adminer.loadbalancer.server.port=8080
-      - traefik.http.routers.adminer_secure.tls.options=mintls13@file
-      placement:
-        constraints:
-        - node.role == manager
+      - traefik.http.routers.adminer_secure.middlewares=auth
+      - traefik.http.routers.adminer_secure.tls.certresolver=default
     image: adminer:latest
-#    volumes:
-#    - /production/adminer_data/adminer.css:/var/www/html/adminer.css:ro
+    volumes:
+    - /production/adminer.css:/var/www/html/adminer.css:ro
 
+  appwrite:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.appwrite.middlewares=redirectscheme
+      - traefik.http.routers.appwrite.rule=Host(`app.mcleut.de`)
+      - traefik.http.routers.appwrite_secure.rule=Host(`app.mcleut.de`)
+      - traefik.http.services.appwrite.loadbalancer.server.port=80
+      - traefik.http.routers.appwrite_secure.middlewares=auth
+      - traefik.http.routers.appwrite_secure.tls.certresolver=default
+    image: appwrite/appwrite:latest
+    volumes:
+    - /production/appwrite_data:/data
+
+  bhd:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.bhd.middlewares=redirectscheme
+      - traefik.http.routers.bhd.rule=Host(`bhd.mcleut.de`)
+      - traefik.http.routers.bhd_secure.rule=Host(`bhd.mcleut.de`)
+      - traefik.http.services.bhd.loadbalancer.server.port=80
+#      - traefik.http.routers.adminer_secure.middlewares=auth
+      - traefik.http.routers.bhd_secure.tls.certresolver=default
+    image: caddy:latest
+    volumes:
+    - /production/caddy_data:/data
+    - /production/bhd_data:/usr/share/caddy:ro            
+  
   bitwarden:
     deploy:
       labels:
       - traefik.enable=true
       - traefik.http.routers.bitwarden.middlewares=redirectscheme
-      - traefik.http.routers.bitwarden.rule=Host(`bitwarden.mcleut.ryzen`)
-      - traefik.http.routers.bitwarden_secure.rule=Host(`bitwarden.mcleut.ryzen`)
+      - traefik.http.routers.bitwarden.rule=Host(`bitwarden.mcleut.de`)
+      - traefik.http.routers.bitwarden_secure.rule=Host(`bitwarden.mcleut.de`)
       - traefik.http.services.bitwarden.loadbalancer.server.port=80
-      - traefik.http.routers.bitwarden_secure.tls.options=mintls13@file
+#     - traefik.http.routers.bitwarden_secure.middlewares=auth
+      - traefik.http.routers.bitwarden_secure.tls.certresolver=default
     image: bitwardenrs/server:latest
     volumes:
     - /etc/localtime:/etc/localtime:ro
-#    - /etc/timezone:/etc/timezone:ro 
+    - /etc/timezone:/etc/timezone:ro 
     - /production/bitwarden_data:/data
+
+  caddy_me:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.caddy_me.middlewares=redirectscheme
+      - traefik.http.routers.caddy_me.rule=Host(`me.mcleut.de`)
+      - traefik.http.routers.caddy_me_secure.rule=Host(`me.mcleut.de`)      
+      - traefik.http.services.caddy_me.loadbalancer.server.port=80
+#     - traefik.http.routers.caddy_me_secure.middlewares=auth
+      - traefik.http.routers.caddy_me_secure.tls.certresolver=default
+    image: caddy:latest    
+    volumes:
+    - /production/caddy_data:/data
+    - /production/me:/usr/share/caddy:ro
 
   caddy:
     deploy:
       labels:
       - traefik.enable=true
       - traefik.http.routers.caddy.middlewares=redirectscheme
-      - traefik.http.routers.caddy.rule=Host(`mcleut.ryzen`)
-      - traefik.http.routers.caddy_secure.rule=Host(`mcleut.ryzen`)      
+      - traefik.http.routers.caddy.rule=Host(`mcleut.de`)
+      - traefik.http.routers.caddy_secure.rule=Host(`mcleut.de`)      
       - traefik.http.services.caddy.loadbalancer.server.port=80
-      - traefik.http.routers.caddy_secure.tls.options=mintls13@file
+#     - traefik.http.routers.adminer_secure.middlewares=auth
+#      - traefik.http.routers.caddy_secure.middlewares=auth
+      - traefik.http.routers.caddy_secure.tls.certresolver=default
     image: caddy:latest    
     volumes:
     - /production/caddy_data:/data
-    - /production/me:/usr/share/caddy:ro
+    - /production/business_me:/usr/share/caddy:ro
+
+  cadvisor:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.cadvisor.middlewares=redirectscheme
+      - traefik.http.routers.cadvisor.rule=Host(`cadvisor.mcleut.de`)
+      - traefik.http.routers.cadvisor_secure.rule=Host(`cadvisor.mcleut.de`)      
+      - traefik.http.services.cadvisor.loadbalancer.server.port=8080
+      - traefik.http.routers.cadvisor_secure.middlewares=auth
+      - traefik.http.routers.cadvisor_secure.tls.certresolver=default        
+    image: gcr.io/google-containers/cadvisor@sha256:16bc6858dc5b7063c7d89153ad6544370eb79cb27a1b8d571f31b98673f7a324
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+
+  checkmk:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.checkmk.middlewares=redirectscheme
+      - traefik.http.routers.checkmk.rule=Host(`checkmk.mcleut.de`)
+      - traefik.http.routers.checkmk_secure.rule=Host(`checkmk.mcleut.de`)
+      - traefik.http.services.checkmk.loadbalancer.server.port=5000
+      - traefik.http.routers.checkmk_secure.middlewares=auth
+      - traefik.http.routers.checkmk_secure.tls.certresolver=default
+    image: checkmk/check-mk-raw:1.6.0-latest
+    volumes:
+    - /production/checkmk_data:/omd/sites
+    - /etc/localtime:/etc/localtime:ro
 
   cloudtorrent:
     deploy:
       labels:
       - traefik.enable=true
       - traefik.http.routers.cloudtorrent.middlewares=redirectscheme
-      - traefik.http.routers.cloudtorrent.rule=Host(`torrent.mcleut.ryzen`)
-      - traefik.http.routers.cloudtorrent_secure.rule=Host(`torrent.mcleut.ryzen`)
+      - traefik.http.routers.cloudtorrent.rule=Host(`torrent.mcleut.de`)
+      - traefik.http.routers.cloudtorrent_secure.rule=Host(`torrent.mcleut.de`)
       - traefik.http.services.cloudtorrent.loadbalancer.server.port=3000
-      - traefik.http.routers.cloudtorrent_secure.tls.options=mintls13@file
+      - traefik.http.routers.cloudtorrent_secure.middlewares=auth
+      - traefik.http.routers.cloudtorrent_secure.tls.certresolver=default
     image: jpillora/cloud-torrent:latest
     volumes:
-    - /production/cloudtorrent_data:/downloads
+    - /production/cloudtorrent_data:/downloads  
 
   codimd:
     deploy:
       labels:
       - traefik.enable=true
       - traefik.http.routers.codimd.middlewares=redirectscheme
-      - traefik.http.routers.codimd.rule=Host(`codimd.mcleut.ryzen`)
-      - traefik.http.routers.codimd_secure.rule=Host(`codimd.mcleut.ryzen`)
+      - traefik.http.routers.codimd.rule=Host(`codimd.mcleut.de`)
+      - traefik.http.routers.codimd_secure.rule=Host(`codimd.mcleut.de`)
       - traefik.http.services.codimd.loadbalancer.server.port=3000
-      - traefik.http.routers.codimd_secure.tls.options=mintls13@file
+#     - traefik.http.routers.codimd_secure.middlewares=auth
+      - traefik.http.routers.codimd_secure.tls.certresolver=default
     image: linuxserver/codimd:latest
     volumes:
     - /production/codimd_data:/config
     - /etc/localtime:/etc/localtime:ro
+
+  collabora:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.collabora.middlewares=redirectscheme
+      - traefik.http.routers.collabora.rule=Host(`office.mcleut.de`)
+      - traefik.http.routers.collabora_secure.rule=Host(`office.mcleut.de`)
+      - traefik.http.services.collabora.loadbalancer.server.port=9980
+      - traefik.http.routers.collabora_secure.middlewares=auth
+      - traefik.http.routers.collabora_secure.tls.certresolver=default
+    image: collabora/code:latest
+    environment:
+      - VIRTUAL_HOST = office.mcleut.de
+      - SLEEPFORDEBUGGER = 0
+      - VIRTUAL_PROTO = https
+    volumes:
+    - /production/collabora_data:/data
 
   fail2ban:
     deploy:
@@ -97,16 +212,160 @@ services:
       labels:
       - traefik.enable=true
       - traefik.http.routers.gitea.middlewares=redirectscheme
-      - traefik.http.routers.gitea.rule=Host(`git.mcleut.ryzen`)
-      - traefik.http.routers.gitea_secure.rule=Host(`git.mcleut.ryzen`)
+      - traefik.http.routers.gitea.rule=Host(`git.mcleut.de`)
+      - traefik.http.routers.gitea_secure.rule=Host(`git.mcleut.de`)
       - traefik.http.services.gitea.loadbalancer.server.port=3000
-      - traefik.http.routers.gitea_secure.tls.options=mintls13@file
+#     - traefik.http.routers.gitea_secure.middlewares=auth
+      - traefik.http.routers.gitea_secure.tls.certresolver=default
+
     image: gitea/gitea:latest
     volumes:
     - /production/gitea_data:/data
- #   - /etc/timezone:/etc/timezone:ro
+    - /etc/timezone:/etc/timezone:ro
     - /etc/localtime:/etc/localtime:ro
   
+  gitpod:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.gitpod.middlewares=redirectscheme
+      - traefik.http.routers.gitpod.rule=Host(`gitpod.mcleut.de`)
+      - traefik.http.routers.gitpod_secure.rule=Host(`gitpod.mcleut.de`)
+      - traefik.http.services.gitpod.loadbalancer.server.port=80
+#     - traefik.http.routers.gitpod_secure.middlewares=auth
+      - traefik.http.routers.gitpod_secure.tls.certresolver=default
+    image: gitpod/workspace-full:latest
+    volumes:
+    - /production/gitpod_data:/data
+
+#  gitlab:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.gitlab.middlewares=redirectscheme
+#      - traefik.http.routers.gitlab.rule=Host(`gitlab.mcleut.de`)
+#      - traefik.http.routers.gitlab_secure.rule=Host(`gitlab.mcleut.de`)
+#      - traefik.http.services.gitlab.loadbalancer.server.port=80
+#      - traefik.http.services.gitlab.loadbalancer.server.port=443
+#      - traefik.http.routers.gitlab_secure.middlewares=auth
+#      - traefik.http.routers.gitlab_secure.tls.certresolver=default
+#    image: gitlab/gitlab-ce:latest
+
+#  mailcow_nginx:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.mailcow_nginx.middlewares=redirectscheme
+#      - traefik.http.routers.mailcow_nginx.rule=Host(`mail.mcleut.de`)
+#      - traefik.http.routers.mailcow_nginx_secure.rule=Host(`mail.mcleut.de`)
+#      - traefik.http.services.mailcow_gninx.loadbalancer.server.port=80
+#      - traefik.http.routers.mailcow_nginx_secure.middlewares=auth
+#      - traefik.http.routers.mailcow_nginx_secure.tls.certresolver=default
+#      - traefik.http.routers.nginx-mailcow.rule=HostRegexp(`{host:(autodiscover|autoconfig|webmail|mail|email).+}`
+
+  guacamole:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.guacamole.middlewares=redirectscheme
+      - traefik.http.routers.guacamole.rule=Host(`guacamole.mcleut.de`)
+      - traefik.http.routers.guacamole_secure.rule=Host(`guacamole.mcleut.de`)
+      - traefik.http.services.guacamole.loadbalancer.server.port=8080
+      - traefik.http.routers.guacamole_secure.middlewares=auth
+      - traefik.http.routers.guacamole_secure.tls.certresolver=default
+    image: guacamole/guacamole:latest
+
+  mariadb:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.mariadb.middlewares=redirectscheme
+      - traefik.tcp.services.mariadb.loadbalancer.server.port=3306
+      - traefik.tcp.routers.mariadb_secure.middlewares=auth
+      - traefik.tcp.routers.mariadb_secure.tls.certresolver=default
+    image: mariadb:latest
+    environment:
+      - MYSQL_DATABASE=admin
+      - MYSQL_USER=admin
+      - MYSQL_PASSWORD=admin
+      - MYSQL_ROOT_PASSWORD=admin
+    volumes:
+    - /production/mariadb_data:/var/lib/mysql
+  
+  netdata:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.netdata.middlewares=redirectscheme
+      - traefik.http.routers.netdata.rule=Host(`netdata.mcleut.de`)
+      - traefik.http.routers.netdata_secure.rule=Host(`netdata.mcleut.de`)      
+      - traefik.http.services.netdata.loadbalancer.server.port=19999
+      - traefik.http.routers.netdata_secure.middlewares=auth
+      - traefik.http.routers.netdata_secure.tls.certresolver=default
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
+    image: netdata/netdata:latest
+    volumes:
+    - /production/netdata_data/config/netdata:/etc/netdata
+    - /production/netdata_data/lib/netdata:/var/lib/netdata  
+    - /production/netdata_data/cache/netdata:/var/cache/netdata
+    - /etc/passwd:/host/etc/passwd:ro
+    - /etc/group:/host/etc/group:ro
+    - /proc:/host/proc:ro
+    - /sys:/host/sys:ro
+    - /etc/os-release:/host/etc/os-release:ro
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  nextmap_caddy:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.nextmap_caddy.middlewares=redirectscheme
+      - traefik.http.routers.nextmap_caddy.rule=Host(`nextmap.mcleut.de`)
+      - traefik.http.routers.nextmap_caddy_secure.rule=Host(`nextmap.mcleut.de`)      
+      - traefik.http.services.nextmap_caddy.loadbalancer.server.port=80
+##     - traefik.http.routers.nextbike_caddy_secure.middlewares=auth
+      - traefik.http.routers.nextmap_caddy_secure.tls.certresolver=default
+    image: caddy:latest    
+    volumes:
+    - /production/nextmap_caddy_data:/data
+    - /production/nextmap:/usr/share/caddy:ro
+    - /production/Caddyfile:/etc/Caddyfile:ro
+
+  nextmap_crontab:
+    deploy:
+    image: alpine:latest
+    command: crond -f
+    volumes:
+    - /production/cron/15min:/etc/periodic/15min/:ro
+      
+  nextmap_maria:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.nextmap_maria.middlewares=redirectscheme
+      - traefik.tcp.services.nextmap_maria.loadbalancer.server.port=3306
+      - traefik.tcp.routers.nextmap_maria_secure.middlewares=auth
+      - traefik.tcp.routers.nextmap_maria_secure.tls.certresolver=default
+    image: mariadb:latest
+    environment:
+      - MYSQL_DATABASE=k67380_nextbike
+      - MYSQL_USER=k67380_nextbike
+      - MYSQL_PASSWORD=Ftdv06_Q9
+      - MYSQL_ROOT_PASSWORD=Ftdv06_Q9
+    volumes:
+    - /production/nextmap_maria_data:/var/lib/mysql      
+
+  nextmap_php_fpm:
+    deploy:
+    image: php:7.4.9-fpm-alpine
+    ports:
+    - 9000:9000 
+    volumes:
+    - /production/nextmap:/var/www/html
+
   nextcloud:
     env_file: ./nextcloud.env
     image: nextcloud:20.0.6-fpm-alpine
@@ -121,20 +380,20 @@ services:
       labels:
       - traefik.enable=true
       - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_calendar.redirectregex.regex=.*
-      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_calendar.redirectregex.replacement=https://nextcloud.mcleut.ryzen/apps/calendar/
+      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_calendar.redirectregex.replacement=https://nextcloud.mcleut.de/apps/calendar/
       - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_contacts.redirectregex.regex=.*
-      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_contacts.redirectregex.replacement=https://nextcloud.mcleut.ryzen/apps/contacts/
+      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_contacts.redirectregex.replacement=https://nextcloud.mcleut.de/apps/contacts/
       - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_office.redirectregex.regex=.*
-      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_office.redirectregex.replacement=https://nextcloud.mcleut.ryzen/apps/collabora/
+      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_office.redirectregex.replacement=https://nextcloud.mcleut.de/apps/collabora/
       - traefik.http.routers.nextcloud_nginx.middlewares=redirectscheme
-      - traefik.http.routers.nextcloud_nginx.rule=Host(`nextcloud.mcleut.ryzen`)
-      - traefik.http.routers.nextcloud_nginx_secure.rule=Host(`nextcloud.mcleut.ryzen`)
+      - traefik.http.routers.nextcloud_nginx.rule=Host(`nextcloud.mcleut.de`)
+      - traefik.http.routers.nextcloud_nginx_secure.rule=Host(`nextcloud.mcleut.de`)
       - traefik.http.routers.nextcloud_nginx_secure_calendar.middlewares=nextcloud_nginx_secure_redirectregex_calendar@docker
-      - traefik.http.routers.nextcloud_nginx_secure_calendar.rule=Host(`calendar.mcleut.ryzen`)
+      - traefik.http.routers.nextcloud_nginx_secure_calendar.rule=Host(`calendar.mcleut.de`)
       - traefik.http.routers.nextcloud_nginx_secure_contacts.middlewares=nextcloud_nginx_secure_redirectregex_contacts@docker
-      - traefik.http.routers.nextcloud_nginx_secure_contacts.rule=Host(`contacts.mcleut.ryzen`)
+      - traefik.http.routers.nextcloud_nginx_secure_contacts.rule=Host(`contacts.mcleut.de`)
       - traefik.http.routers.nextcloud_nginx_secure_office.middlewares=nextcloud_nginx_secure_redirectregex_office@docker
-      - traefik.http.routers.nextcloud_nginx_secure_office.rule=Host(`office.mcleut.ryzen`)
+      - traefik.http.routers.nextcloud_nginx_secure_office.rule=Host(`office.mcleut.de`)
       - traefik.http.services.nextcloud_nginx.loadbalancer.server.port=80
       - traefik.http.routers.nextcloud_nginx_secure.tls.certresolver=default
     image: nginx:1.19.6-alpine
@@ -142,56 +401,133 @@ services:
     - /production/nextcloud-nginx.conf:/etc/nginx/nginx.conf
     - /production/nextcloud_data:/var/www/html/
 
-  novnc_kali:
-   deploy:
-     labels:
-     - traefik.enable=true
-     - traefik.http.routers.novnc_kali.middlewares=redirectscheme
-     - traefik.http.routers.novnc_kali.rule=Host(`kali.mcleut.de`)
-     - traefik.http.routers.novnc_kali_secure.rule=Host(`kali.mcleut.de`)
-     - traefik.http.services.novnc_kali.loadbalancer.server.port=6080
-   image: lukaszlach/kali-desktop:xfce
-   environment:
-     - RESOLUTION=1920x1080x24
-   volumes:
-   - /production/kali_data:/home
+#  nms:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.nms.middlewares=redirectscheme
+#      - traefik.http.routers.nms.rule=Host(`nms.mcleut.de`)
+#      - traefik.http.routers.nms_secure.rule=Host(`nms.mcleut.de`)
+#      - traefik.http.services.nms.loadbalancer.server.port=8000
+#      - traefik.http.routers.nms_secure.middlewares=auth
+#      - traefik.http.routers.nms_secure.tls.certresolver=default
+#    image: librenms/librenms:latest
 
- # pihole:
- #   deploy:
- #     labels:
- #     - traefik.enable=true
- #     - traefik.http.routers.pihole.middlewares=redirectscheme
- #     - traefik.http.routers.pihole.rule=Host(`pihole.mcleut.ryzen`)
- #     - traefik.http.routers.pihole.rule=Host(`pihole.mcleut.ryzen`) && PathPrefix(`/admin`)
- #     - traefik.http.routers.pihole_secure.rule=Host(`pihole.mcleut.ryzen`)
- #     - traefik.http.services.pihole.loadbalancer.server.port=80
- #     - traefik.http.routers.pihole_secure.tls.certresolver=default
- #   image: pihole/pihole:latest
- #   ports:
- #     - 53:53
- #   environment:
- #     TZ: 'Europe/Berlin'
- #     ServerIP: 192.168.0.212
- #   volumes:
- #   - /production/pihole_data/:/etc/pihole/
- #   - /production/dnsmasq_data/:/etc/dnsmasq.d/
- #   - /etc/localtime:/etc/localtime:ro
- #   - /etc/timezone:/etc/timezone:ro
- #   cap_add:
- #   - NET_ADMIN
-  
+  novnc_kali:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.novnc_kali.middlewares=redirectscheme
+      - traefik.http.routers.novnc_kali.rule=Host(`kali.mcleut.de`)
+      - traefik.http.routers.novnc_kali_secure.rule=Host(`kali.mcleut.de`)
+      - traefik.http.services.novnc_kali.loadbalancer.server.port=6080
+      - traefik.http.routers.novnc_kali_secure.middlewares=auth
+      - traefik.http.routers.novnc_kali_secure.tls.certresolver=default
+    image: lukaszlach/kali-desktop:xfce
+    environment:
+      - RESOLUTION=1920x1080x24
+    volumes:
+    - /production/kali_data:/home
+
+  ownphotos:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.ownphotos.middlewares=redirectscheme
+      - traefik.http.routers.ownphotos.rule=Host(`ownphotos.mcleut.de`)
+      - traefik.http.routers.ownphotos_secure.rule=Host(`ownphotos.mcleut.de`)
+      - traefik.http.services.ownphotos.loadbalancer.server.port=80
+      - traefik.http.routers.ownphotos_secure.middlewares=auth
+      - traefik.http.routers.ownphotos_secure.tls.certresolver=default
+    image: hooram/ownphotos:master
+    environment:
+      - ALLOWED_HOSTS=ownphotos.mcleut.de
+    volumes:
+    - /production/ownphotos_data/request.py:/venv/lib/python3.5/site-packages/django/http/request.py:ro
+#    - /production/ownphotos_data/miniconda:/miniconda 
+#    - /production/ownphotos_data/code:/code
+
   pad:
     deploy:
       labels:
       - traefik.enable=true
       - traefik.http.routers.pad.middlewares=redirectscheme
-      - traefik.http.routers.pad.rule=Host(`pad.mcleut.ryzen`)
-      - traefik.http.routers.pad_secure.rule=Host(`pad.mcleut.ryzen`)
+      - traefik.http.routers.pad.rule=Host(`pad.mcleut.de`)
+      - traefik.http.routers.pad_secure.rule=Host(`pad.mcleut.de`)
       - traefik.http.services.pad.loadbalancer.server.port=9001
-      - traefik.http.routers.pad_secure.tls.options=mintls13@file
+      - traefik.http.routers.pad_secure.middlewares=auth
+      - traefik.http.routers.pad_secure.tls.certresolver=default
     image: etherpad/etherpad:latest
     volumes:
     - /production/pad_data:/data 
+
+  pihole:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.pihole.middlewares=redirectscheme
+      - traefik.http.routers.pihole.rule=Host(`pihole.mcleut.de`)
+      - traefik.http.routers.pihole.rule=Host(`pihole.mcleut.de`) && PathPrefix(`/admin`)
+      - traefik.http.routers.pihole_secure.rule=Host(`pihole.mcleut.de`)
+      - traefik.http.services.pihole.loadbalancer.server.port=80
+      - traefik.http.routers.pihole_secure.middlewares=auth
+      - traefik.http.routers.pihole_secure.tls.certresolver=default
+    image: pihole/pihole:latest
+    ports:
+      - 53:53/tcp
+      - 53:53/udp
+    environment:
+      TZ: 'Europe/Berlin'
+ #     VIRTUAL_HOST: pihole.mcleut.de/admin
+    volumes:
+    - /production/pihole_data:/etc/pihole/
+    - /production/dnsmasq_data/:/etc/dnsmasq.d/
+    - /etc/localtime:/etc/localtime:ro
+    - /etc/timezone:/etc/timezone:ro
+
+  piwigo:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.piwigo.middlewares=redirectscheme
+      - traefik.http.routers.piwigo.rule=Host(`piwi.mcleut.de`)
+      - traefik.http.routers.piwigo_secure.rule=Host(`piwi.mcleut.de`)
+      - traefik.http.services.piwigo.loadbalancer.server.port=80
+      - traefik.http.routers.piwigo_secure.middlewares=auth
+      - traefik.http.routers.piwigo_secure.tls.certresolver=default
+    image: linuxserver/piwigo:latest
+    volumes:
+    - /production/piwigo_data:/config
+
+  plex:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.plex.middlewares=redirectscheme
+      - traefik.http.routers.plex.rule=Host(`plex.mcleut.de`)
+      - traefik.http.routers.plex_secure.rule=Host(`plex.mcleut.de`)
+      - traefik.http.services.plex.loadbalancer.server.port=80
+      - traefik.http.routers.plex_secure.middlewares=auth
+      - traefik.http.routers.plex_secure.tls.certresolver=default      
+    image: plexinc/pms-docker:latest
+    volumes:
+    - /production/plex_data:/data
+    - /etc/timezone:/etc/timezone:ro
+
+  privatebin:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.privatebin.middlewares=redirectscheme
+      - traefik.http.routers.privatebin.rule=Host(`bin.mcleut.de`)
+      - traefik.http.routers.privatebin_secure.rule=Host(`bin.mcleut.de`)
+      - traefik.http.services.privatebin.loadbalancer.server.port=8080
+      - traefik.http.routers.privatebin_secure.tls.certresolver=default
+    image: privatebin/nginx-fpm-alpine:latest
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - /etc/timezone:/etc/timezone:ro 
+    - /production/privatebin_data:/privatebin
 
   portainer:
     command: -H tcp://tasks.portainer-agent:9001 --tlsskipverify --admin-password-file '/run/secrets/portainer_admin-password'
@@ -199,20 +535,20 @@ services:
       labels:
       - traefik.enable=true
       - traefik.http.routers.portainer.middlewares=redirectscheme
-      - traefik.http.routers.portainer.rule=Host(`portainer.mcleut.ryzen`)
-      - traefik.http.routers.portainer_secure.rule=Host(`portainer.mcleut.ryzen`)
+      - traefik.http.routers.portainer.rule=Host(`portainer.mcleut.de`)
+      - traefik.http.routers.portainer_secure.rule=Host(`portainer.mcleut.de`)
       - traefik.http.services.portainer.loadbalancer.server.port=9000
-      - traefik.http.routers.portainer_secure.tls.options=mintls13@file
+      - traefik.http.routers.portainer_secure.tls.certresolver=default
       mode: replicated
       placement:
         constraints:
         - node.role == manager
       replicas: 1
-    image: portainer/portainer:latest
+    image: portainer/portainer-ce:2.0.0-alpine
     secrets:
     - portainer_admin-password
     volumes:
-    - /production/portainer_data:/data
+    - portainer_data:/data
 
   portainer-agent:
     deploy:
@@ -224,39 +560,138 @@ services:
       AGENT_CLUSTER_ADDR: tasks.portainer-agent
     image: portainer/agent:latest
     volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
+    - /var/run/docker.sock:/var/run/docker.sock:ro
     - /var/lib/docker/volumes:/var/lib/docker/volumes
+
+  privoxy:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.privoxy.middlewares=redirectscheme
+      - traefik.http.routers.privoxy.rule=Host(`privoxy.mcleut.de`)
+      - traefik.http.routers.privoxy_secure.rule=Host(`privoxy.mcleut.de`)
+      - traefik.http.services.privoxy.loadbalancer.server.port=8118
+      - traefik.http.routers.privoxy_secure.middlewares=auth
+      - traefik.http.routers.privoxy_secure.tls.certresolver=default
+    image: vimagick/privoxy:latest
+
+#  prometheus:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.prometheus.middlewares=redirectscheme
+#      - traefik.http.routers.prometheus.rule=Host(`prom.mcleut.de`)
+#      - traefik.http.routers.prometheus_secure.rule=Host(`prom.mcleut.de`)
+#      - traefik.http.services.prometheus.loadbalancer.server.port=9090
+#      - traefik.http.routers.prometheus_secure.middlewares=auth
+#      - traefik.http.routers.prometheus_secure.tls.certresolver=default
+#    image: prom/prometheus:latest
+#    volumes:
+#    - /:/rootfs:ro
+#    - /var/run:/var/run:rw
+#    - /sys:/sys:ro
+#    - /var/lib/docker/:/var/lib/docker:ro
+#    - /production/prometheus.yml:/etc/prometheus/prometheus.yml
+#    - /production/prometheus_data:/prometheus
+
+  rancher:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.rancher.middlewares=redirectscheme
+      - traefik.http.routers.rancher.rule=Host(`rancher.mcleut.de`)
+      - traefik.http.routers.rancher_secure.rule=Host(`rancher.mcleut.de`)
+      - traefik.http.services.rancher.loadbalancer.server.port=8080
+      - traefik.http.routers.rancher_secure.middlewares=auth
+      - traefik.http.routers.rancher_secure.tls.certresolver=default
+    image: rancher/server:latest
+
+  rancher_agent:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.rancher.middlewares=redirectscheme
+      - traefik.http.routers.rancher_secure.middlewares=auth
+      - traefik.http.routers.rancher_secure.tls.certresolver=default
+    image: rancher/agent:latest
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - /production/rancher_agent_data:/var/lib/rancher
+  
+ # rclone:
+ #  deploy:
+ #     labels:
 
   resilio:
     deploy:
       labels:
       - traefik.enable=true
       - traefik.http.routers.resilio.middlewares=redirectscheme
-      - traefik.http.routers.resilio.rule=Host(`resilio.mcleut.ryzen`)
-      - traefik.http.routers.resilio_secure.rule=Host(`resilio.mcleut.ryzen`)
+      - traefik.http.routers.resilio.rule=Host(`resilio.mcleut.de`)
+      - traefik.http.routers.resilio_secure.rule=Host(`resilio.mcleut.de`)
       - traefik.http.services.resilio.loadbalancer.server.port=8888
-      - traefik.http.routers.resilio_secure.tls.options=mintls13@file
+      - traefik.http.routers.resilio_secure.tls.certresolver=default
     image: resilio/sync:latest 
     volumes:
     - /etc/localtime:/etc/localtime:ro
-#    - /etc/timezone:/etc/timezone:ro
+    - /etc/timezone:/etc/timezone:ro
     - /production/resilio_data:/sync
-    
-  torproxy:
+
+  ssh:
     deploy:
       labels:
       - traefik.enable=true
-    image: dperson/torproxy:armhf
-    ports:
-    - 8080:8080
-    - 9050:9050
-    environment:
-      TZ: 'Europe/Berlin'
+      - traefik.http.routers.ssh.middlewares=redirectscheme
+      - traefik.http.routers.ssh.rule=Host(`ssh.mcleut.de`)
+      - traefik.http.routers.ssh_secure.rule=Host(`ssh.mcleut.de`)
+      - traefik.http.services.ssh.loadbalancer.server.port=8182
+      - traefik.http.routers.ssh_secure.tls.certresolver=default
+    image: niruix/sshwifty:latest
+
+#  rocketchat:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.rocketchat.middlewares=redirectscheme
+#      - traefik.http.routers.rocketchat.rule=Host(`rocketchat.mcleut.de`)
+#      - traefik.http.routers.rocketchat_secure.rule=Host(`rocketchat.mcleut.de`)
+#      - traefik.http.services.rocketchat.loadbalancer.server.port=3000
+#      - traefik.http.routers.rocketchat_secure.middlewares=auth
+#      - traefik.http.routers.rocketchat_secure.tls.certresolver=default
+#    image: rocketchat/rocket.chat:latest
+
+#  speedtest:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.speedtest.middlewares=redirectscheme
+#      - traefik.http.routers.speedtest.rule=Host(`speedtest.mcleut.de`)
+#      - traefik.http.routers.speedtest_secure.rule=Host(`speedtest.mcleut.de`)
+#      - traefik.http.services.speedtest.loadbalancer.server.port=80
+#      - traefik.http.routers.speedtest_secure.tls.certresolver=default
+#    image: adolfintel/speedtest:latest
+#    volumes:
+#    - /production/speedtest_data:/speedtest
+    
+  theia:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.theia.middlewares=redirectscheme
+      - traefik.http.routers.theia.rule=Host(`theia.mcleut.de`)
+      - traefik.http.routers.theia_secure.rule=Host(`theia.mcleut.de`)
+      - traefik.http.services.theia.loadbalancer.server.port=3000
+#      - traefik.http.routers.theia_secure.middlewares=auth
+      - traefik.http.routers.theia_secure.tls.certresolver=default
+    image: theiaide/theia:latest
     volumes:
-    - /production/torproxy_data/torrc:/etc/tor/torrc 
+    - /production/theia_data:/home/project
 
   traefik:
     command:
+    - --certificatesResolvers.default.acme.email=christopher.leuthardt@tutanota.de
+    - --certificatesResolvers.default.acme.storage=/etc/traefik/acme/acme.json
+    - --certificatesResolvers.default.acme.dnsChallenge.provider=cloudflare
     - --api=true
     - --entryPoints.web.address=:80
     - --entryPoints.web-secure.address=:443
@@ -264,25 +699,26 @@ services:
     - --providers.docker.endpoint=unix:///var/run/docker.sock
     - --providers.docker.exposedByDefault=false
     - --providers.docker.swarmMode=true
-    - --providers.file.filename=/dynamic.yml
-    - --providers.file.watch=true
-    - --pilot.token=70ab9c11-ce9e-4686-8b2e-8fc397fa84a2
+    - --pilot.token=2226541c-c3ab-4057-b582-931b68d0d5f4
     deploy:
       labels:
       - traefik.enable=true
-      - traefik.http.middlewares.header_cors.headers.accessControlAllowHeaders=authorization,content-type
-      - traefik.http.middlewares.header_cors.headers.accessControlAllowOrigin=*
       - traefik.http.middlewares.redirectscheme.redirectscheme.scheme=https
       - traefik.http.routers.traefik.middlewares=redirectscheme
-      - traefik.http.routers.traefik.rule=Host(`traefik.mcleut.ryzen`)
-      - traefik.http.routers.traefik_secure.rule=Host(`traefik.mcleut.ryzen`)
+      - traefik.http.routers.traefik.rule=Host(`traefik.mcleut.de`)
+      - traefik.http.routers.traefik_secure.rule=Host(`traefik.mcleut.de`)
       - traefik.http.routers.traefik_secure.service=api@internal
-      - traefik.http.routers.traefik_secure.tls.options=mintls13@file    
       - traefik.http.services.traefik.loadbalancer.server.port=8080
+      - traefik.http.middlewares.auth.basicauth.users=christopher:$$apr1$$jV3Tt/OX$$rp2FmmwKpynkO63lFupl/.
+      - traefik.http.routers.traefik_secure.middlewares=auth
+      - traefik.http.routers.traefik_secure.tls.certresolver=default
       mode: global
       placement:
         constraints:
         - node.role == manager
+    environment:
+      CF_DNS_API_TOKEN_FILE: /run/secrets/traefik_cf-dns-api-token
+      CF_ZONE_API_TOKEN_FILE: /run/secrets/traefik_cf-zone-api-token
     image: traefik:latest
     ports:
     - mode: host
@@ -293,26 +729,82 @@ services:
       protocol: tcp
       published: 443
       target: 443
+    secrets:
+    - traefik_cf-dns-api-token
+    - traefik_cf-zone-api-token
     volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    - ./certificates/:/etc/traefik/acme/
-    - ./traefik_data/dynamic.yml:/dynamic.yml:ro
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - /production/acme_data:/etc/traefik/acme/
+
+  wp:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.wp.middlewares=redirectscheme
+      - traefik.http.routers.wp.rule=Host(`wp.mcleut.de`)
+      - traefik.http.routers.wp_secure.rule=Host(`wp.mcleut.de`)
+      - traefik.http.services.wp.loadbalancer.server.port=80
+      - traefik.http.routers.wp_secure.middlewares=auth
+      - traefik.http.routers.wp_secure.tls.certresolver=default
+    image: wordpress:latest
+    depends_on:
+    - wp_db
+    environment:
+      WORDPRESS_DB_HOST: wp_db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+    volumes:
+    - /production/wp_data:/var/www/html/      
+
+  wp_db:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.wp_db.entrypoints=wp_db
+      - traefik.tcp.routers.wp_db.service=wp_db-svc
+      - traefik.tcp.services.wp_db-svc.loadbalancer.server.port=3306
+    image: mariadb:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: mypassword
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    volumes:
+    - /production/wp_db_data:/var/lib/mysql
 
 version: "3.7"
 volumes:
+  0bin_data: {}
   acme_data: {}
+  bhd_data: {}
   bitwarden_data: {}
   caddy_data: {}
+  checkmk_data: {}
   cloudtorrent_data: {}
   codimd_data: {}
+  collabora_data: {}
+  dnsmasq_data: {}
   fail2ban_data: {}
   gitea_data: {}
+  gitpod_data: {}
   kali_data: {}
+  mariadb_data: {}
+  netdata_data: {}
   nextcloud_data: {}
+  nextmap_caddy_data: {}
+  nextmap_maria_data: {}
+  ownphotos_data: {}
   pad_data: {}
-  portainer_data: {}
   pihole_data: {}
+  piwigo_data: {}
+  portainer_data: {}
+  plex_data: {}
+  privatebin_data: {}
+  prometheus_data: {}
+  rancher_agent_data: {}
+  rclone_data: {}
   resilio_data: {}
-  torproxy_data: {}
-  traefik_data: {}
-
+  speedtest_data: {}
+  theia_data: {}
+  wp_data: {}
+  wp_db_data: {}
