@@ -20,8 +20,8 @@ services:
         constraints:
         - node.role == manager
     image: adminer:latest
-#    volumes:
-#    - /production/adminer_data/adminer.css:/var/www/html/adminer.css:ro
+    volumes:
+    - /production/adminer_data/adminer.css:/var/www/html/adminer.css:ro
 
   bitwarden:
     deploy:
@@ -178,6 +178,21 @@ services:
  #   cap_add:
  #   - NET_ADMIN
   
+  ownphotos:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.ownphotos.middlewares=redirectscheme
+      - traefik.http.routers.ownphotos.rule=Host(`ownphotos.mcleut.ryzen`)
+      - traefik.http.routers.ownphotos_secure.rule=Host(`ownphotos.mcleut.ryzen`)
+      - traefik.http.services.ownphotos.loadbalancer.server.port=80
+      - traefik.http.routers.ownphotos_secure.middlewares=auth
+    image: hooram/ownphotos:master
+    environment:
+      - ALLOWED_HOSTS=ownphotos.mcleut.ryzen
+    volumes:
+      - /production/ownphotos_data:/data
+
   pad:
     deploy:
       labels:
@@ -307,10 +322,10 @@ volumes:
   gitea_data: {}
   kali_data: {}
   nextcloud_data: {}
+  ownphotos_data: {}
   pad_data: {}
   portainer_data: {}
   pihole_data: {}
   resilio_data: {}
   torproxy_data: {}
   traefik_data: {}
-
