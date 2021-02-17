@@ -107,6 +107,20 @@ services:
  #   - /etc/timezone:/etc/timezone:ro
     - /etc/localtime:/etc/localtime:ro
   
+  gitlab:
+    deploy:
+     labels:
+     - traefik.enable=true
+     - traefik.http.routers.gitlab.middlewares=redirectscheme
+     - traefik.http.routers.gitlab.rule=Host(`gitlab.mcleut.ryzen`)
+     - traefik.http.routers.gitlab_secure.rule=Host(`gitlab.mcleut.ryzen`)
+     - traefik.http.services.gitlab.loadbalancer.server.port=80
+     - traefik.http.services.gitlab.loadbalancer.server.port=443
+    image: gitlab/gitlab-ce:latest
+    volumes:
+    - /production/gitlab_data/config:/etc/gitlab
+    - /production/gitlab_data/data:/var/opt/gitlab
+
   nextcloud:
     env_file: ./nextcloud.env
     image: nextcloud:20.0.6-fpm-alpine
@@ -186,7 +200,6 @@ services:
       - traefik.http.routers.ownphotos.rule=Host(`ownphotos.mcleut.ryzen`)
       - traefik.http.routers.ownphotos_secure.rule=Host(`ownphotos.mcleut.ryzen`)
       - traefik.http.services.ownphotos.loadbalancer.server.port=80
-      - traefik.http.routers.ownphotos_secure.middlewares=auth
     image: hooram/ownphotos:master
     environment:
       - ALLOWED_HOSTS=ownphotos.mcleut.ryzen
@@ -320,6 +333,7 @@ volumes:
   codimd_data: {}
   fail2ban_data: {}
   gitea_data: {}
+  gitlab_data: {}
   kali_data: {}
   nextcloud_data: {}
   ownphotos_data: {}
