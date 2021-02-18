@@ -736,6 +736,20 @@ services:
     - /var/run/docker.sock:/var/run/docker.sock:ro
     - /production/acme_data:/etc/traefik/acme/
 
+  visual:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.visual.middlewares=redirectscheme
+      - traefik.http.routers.visual.rule=Host(`visual.mcleut.de`)
+      - traefik.http.routers.visual_secure.rule=Host(`visual.mcleut.de`)
+      - traefik.http.services.visual.loadbalancer.server.port=8080
+      - traefik.http.routers.visual_secure.middlewares=auth
+      - traefik.http.routers.visual_secure.tls.certresolver=default
+    image: dockersamples/visualizer:latest 
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+
   wp:
     deploy:
       labels:
@@ -765,7 +779,7 @@ services:
       - traefik.tcp.services.wp_db-svc.loadbalancer.server.port=3306
     image: mariadb:latest
     environment:
-      MYSQL_ROOT_PASSWORD: mypassword
+      MYSQL_ROOT_PASSWORD: wordpress
       MYSQL_DATABASE: wordpress
       MYSQL_USER: wordpress
       MYSQL_PASSWORD: wordpress
