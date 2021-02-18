@@ -160,8 +160,8 @@ services:
      labels:
      - traefik.enable=true
      - traefik.http.routers.novnc_kali.middlewares=redirectscheme
-     - traefik.http.routers.novnc_kali.rule=Host(`kali.mcleut.de`)
-     - traefik.http.routers.novnc_kali_secure.rule=Host(`kali.mcleut.de`)
+     - traefik.http.routers.novnc_kali.rule=Host(`kali.mcleut.ryzen`)
+     - traefik.http.routers.novnc_kali_secure.rule=Host(`kali.mcleut.ryzen`)
      - traefik.http.services.novnc_kali.loadbalancer.server.port=6080
    image: lukaszlach/kali-desktop:xfce
    environment:

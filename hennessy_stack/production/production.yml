@@ -284,6 +284,53 @@ services:
     - ./certificates/:/etc/traefik/acme/
     - ./traefik_data/dynamic.yml:/dynamic.yml:ro
 
+  visual:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.visual.middlewares=redirectscheme
+      - traefik.http.routers.visual.rule=Host(`visual.mcleut.stack`)
+      - traefik.http.routers.visual_secure.rule=Host(`visual.mcleut.stack`)
+      - traefik.http.services.visual.loadbalancer.server.port=8080
+      - traefik.http.routers.visual_secure.tls.options=mintls13@file
+    image: alexellis2/visualizer-arm:latest 
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+
+  wp:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.wp.middlewares=redirectscheme
+      - traefik.http.routers.wp.rule=Host(`wp.mcleut.stack`)
+      - traefik.http.routers.wp_secure.rule=Host(`wp.mcleut.stack`)
+      - traefik.http.services.wp.loadbalancer.server.port=80
+    image: arm32v7/wordpress:latest
+    depends_on:
+    - wp_db
+    environment:
+      WORDPRESS_DB_HOST: wp_db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+    volumes:
+    - /production/wp_data:/var/www/html/      
+
+  wp_db:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.wp_db.entrypoints=wp_db
+      - traefik.tcp.routers.wp_db.service=wp_db-svc
+      - traefik.tcp.services.wp_db-svc.loadbalancer.server.port=3306
+    image: mariadb:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: wordpress
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    volumes:
+    - /production/wp_db_data:/var/lib/mysql
+
 version: "3.7"
 volumes:
   acme_data: {}
@@ -300,4 +347,5 @@ volumes:
   resilio_data: {}
   torproxy_data: {}
   traefik_data: {}
-
+  wp_data: {}
+  wp_db_data: {}
