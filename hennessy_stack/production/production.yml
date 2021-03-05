@@ -242,7 +242,7 @@ services:
       volumes: 
       - /production/syspass_data/config:/var/www/html/sysPass/app/config
       - /production/syspass_data/backup:/var/www/html/sysPass/app/backup
-        
+
   torproxy:
     deploy:
       labels:
@@ -360,6 +360,7 @@ volumes:
   portainer_data: {}
   pihole_data: {}
   resilio_data: {}
+  syspass_data: {}
   torproxy_data: {}
   traefik_data: {}
   wp_data: {}
