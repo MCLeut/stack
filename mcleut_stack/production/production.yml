@@ -672,7 +672,22 @@ services:
 #    image: adolfintel/speedtest:latest
 #    volumes:
 #    - /production/speedtest_data:/speedtest
-    
+  
+  syspass:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.syspass.middlewares=redirectscheme
+      - traefik.http.routers.syspass.rule=Host(`syspass.mcleut.de`)
+      - traefik.http.routers.syspass_secure.rule=Host(`syspass.mcleut.de`)
+      - traefik.http.services.syspass.loadbalancer.server.port=80
+#      - traefik.http.routers.syspass_secure.middlewares=auth
+      - traefik.http.routers.syspass_secure.tls.certresolver=default
+      image: syspass/syspass:latest
+      volumes: 
+      - /production/syspass_data/config:/var/www/html/sysPass/app/config
+      - /production/syspass_data/backup:/var/www/html/sysPass/app/backup
+
   theia:
     deploy:
       labels:
