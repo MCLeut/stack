@@ -19,11 +19,29 @@ services:
       - traefik.http.routers.0bin.rule=Host(`0bin.mcleut.de`)
       - traefik.http.routers.0bin_secure.rule=Host(`0bin.mcleut.de`)
       - traefik.http.services.0bin.loadbalancer.server.port=80
-#      - traefik.http.routers.0bin_secure.middlewares=auth
+#      - traefik.http.routers.0bin_secure.middlewares=oberurf_auth
       - traefik.http.routers.0bin_secure.tls.certresolver=default
     image: gabe565/0bin:latest
     volumes:
     - /production/0bin_data:/data     
+
+  0bin_cjd:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.0bin_cjd.middlewares=redirectscheme
+      - traefik.http.routers.0bin_cjd.rule=Host(`cjd.mcleut.de`)
+      - traefik.http.routers.0bin_cjd_secure.rule=Host(`cjd.mcleut.de`)
+      - traefik.http.services.0bin_cjd.loadbalancer.server.port=8080
+      - traefik.http.routers.0bin_cjd_secure.middlewares=0bin_cjd_auth
+      - traefik.http.middlewares.0bin_cjd_auth.basicauth.users=kazimieras:$$apr1$$/Q.bDWm8$$Rqf/oDJWoaGy4xsJ3felc/,orlanda:$$apr1$$7AEoLz8d$$.Ft2xGuUI1OjrQSYf2.S9.,shelley:$$apr1$$OctvNABj$$FSgPNSvLargM8ztAjyqSr0,quirin:$$apr1$$g5mQm4hT$$7Izzvr2yVkRzuCEJP1xp/1,vernersen:$$apr1$$WYKKnFFK$$ZggFBrA61t08qpha6JKu31,panagiotakis:$$apr1$$IQkV9JFe$$iLfOBC9AUATKOAPuIZC2F1,agrippina:$$apr1$$ykI8aTUT$$woc.vBv8ZB8lMq9poR.IR0,tsukiko:$$apr1$$R7PLC2g8$$NV/pP.xdUPR8UsYNtkUtq.,radraic:$$apr1$$ocD9JAqZ$$4m.yUgibIaZoOiPcXU/BD1,kirchner:$$apr1$$7PXOaNpO$$gIzSPB13nKUDci/EX7QlU1
+      - traefik.http.routers.0bin_cjd_secure.tls.certresolver=default
+    image: privatebin/nginx-fpm-alpine:latest
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - /etc/timezone:/etc/timezone:ro 
+    - /production/0bin_cjd_data:/data
+
 
   adminer:
     deploy:
@@ -92,7 +110,7 @@ services:
       - traefik.http.routers.caddy_me.rule=Host(`me.mcleut.de`)
       - traefik.http.routers.caddy_me_secure.rule=Host(`me.mcleut.de`)      
       - traefik.http.services.caddy_me.loadbalancer.server.port=80
-#     - traefik.http.routers.caddy_me_secure.middlewares=auth
+      - traefik.http.routers.caddy_me_secure.middlewares=auth
       - traefik.http.routers.caddy_me_secure.tls.certresolver=default
     image: caddy:latest    
     volumes:
@@ -107,8 +125,7 @@ services:
       - traefik.http.routers.caddy.rule=Host(`mcleut.de`)
       - traefik.http.routers.caddy_secure.rule=Host(`mcleut.de`)      
       - traefik.http.services.caddy.loadbalancer.server.port=80
-#     - traefik.http.routers.adminer_secure.middlewares=auth
-#      - traefik.http.routers.caddy_secure.middlewares=auth
+      - traefik.http.routers.caddy_secure.middlewares=auth
       - traefik.http.routers.caddy_secure.tls.certresolver=default
     image: caddy:latest    
     volumes:
@@ -127,10 +144,49 @@ services:
       - traefik.http.routers.cadvisor_secure.tls.certresolver=default        
     image: gcr.io/google-containers/cadvisor@sha256:16bc6858dc5b7063c7d89153ad6544370eb79cb27a1b8d571f31b98673f7a324
     volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:rw
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
+    - /:/rootfs:ro
+    - /var/run:/var/run:rw
+    - /sys:/sys:ro
+    - /var/lib/docker/:/var/lib/docker:ro
+
+  chat:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.chat.middlewares=redirectscheme
+      - traefik.http.routers.chat.rule=Host(`chat.mcleut.de`)
+      - traefik.http.routers.chat_secure.rule=Host(`chat.mcleut.de`)
+      - traefik.http.services.chat.loadbalancer.server.port=3000
+      - traefik.http.routers.chat_secure.middlewares=auth
+      - traefik.http.routers.chat_secure.tls.certresolver=default
+    image: rocketchat/rocket.chat:latest
+    depends_on:
+    - chat_db
+    environment:
+      DATABASE_CLIENT: mongo
+      DATABASE_NAME: chat_db
+      DATABASE_HOST: chat_db
+      DATABASE_PORT: 27017
+      DATABASE_USERNAME: chat_db
+      DATABASE_PASSWORD: chat_db
+      MONGO_URL: mongodb://mongo:27017/rocketchat
+      MONGO_OPLOG_URL: mongodb://mongo:27017/local
+    volumes:
+    - /production/chat_data:/app/uploads
+
+  chat_db:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.chat_db.entrypoints=chat_db
+      - traefik.tcp.routers.chat_db.service=chat_db-svc
+      - traefik.tcp.services.chat_db-svc.loadbalancer.server.port=27017
+    image: mongo:latest
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: chat_db
+      MONGO_INITDB_ROOT_PASSWORD: chat_db
+    volumes:
+    - /production/chat_db_data:/data/db
 
   checkmk:
     deploy:
@@ -186,11 +242,17 @@ services:
       - traefik.http.services.collabora.loadbalancer.server.port=9980
       - traefik.http.routers.collabora_secure.middlewares=auth
       - traefik.http.routers.collabora_secure.tls.certresolver=default
+    cap_add:
+      - MKNOD
     image: collabora/code:latest
     environment:
+      - dictionaries = 'en de'
+      - username = test
+      - password = test
       - VIRTUAL_HOST = office.mcleut.de
       - SLEEPFORDEBUGGER = 0
       - VIRTUAL_PROTO = https
+      - MKNOD
     volumes:
     - /production/collabora_data:/data
 
@@ -224,19 +286,19 @@ services:
     - /etc/timezone:/etc/timezone:ro
     - /etc/localtime:/etc/localtime:ro
   
-  gitpod:
-    deploy:
-      labels:
-      - traefik.enable=true
-      - traefik.http.routers.gitpod.middlewares=redirectscheme
-      - traefik.http.routers.gitpod.rule=Host(`gitpod.mcleut.de`)
-      - traefik.http.routers.gitpod_secure.rule=Host(`gitpod.mcleut.de`)
-      - traefik.http.services.gitpod.loadbalancer.server.port=80
+#  gitpod:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.gitpod.middlewares=redirectscheme
+#      - traefik.http.routers.gitpod.rule=Host(`gitpod.mcleut.de`)
+#      - traefik.http.routers.gitpod_secure.rule=Host(`gitpod.mcleut.de`)
+#      - traefik.http.services.gitpod.loadbalancer.server.port=80
 #     - traefik.http.routers.gitpod_secure.middlewares=auth
-      - traefik.http.routers.gitpod_secure.tls.certresolver=default
-    image: gitpod/workspace-full:latest
-    volumes:
-    - /production/gitpod_data:/data
+#      - traefik.http.routers.gitpod_secure.tls.certresolver=default
+#    image: gitpod/workspace-full:latest
+#    volumes:
+#    - /production/gitpod_data:/data
 
 #  gitlab:
 #    deploy:
@@ -263,17 +325,62 @@ services:
 #      - traefik.http.routers.mailcow_nginx_secure.tls.certresolver=default
 #      - traefik.http.routers.nginx-mailcow.rule=HostRegexp(`{host:(autodiscover|autoconfig|webmail|mail|email).+}`
 
-  guacamole:
+#  guacamole:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.guacamole.middlewares=redirectscheme
+#      - traefik.http.routers.guacamole.rule=Host(`guacamole.mcleut.de`)
+#      - traefik.http.routers.guacamole_secure.rule=Host(`guacamole.mcleut.de`)
+#      - traefik.http.services.guacamole.loadbalancer.server.port=8080
+#      - traefik.http.routers.guacamole_secure.middlewares=auth
+#      - traefik.http.routers.guacamole_secure.tls.certresolver=default
+#    image: guacamole/guacamole:latest
+
+  instapy:
     deploy:
       labels:
       - traefik.enable=true
-      - traefik.http.routers.guacamole.middlewares=redirectscheme
-      - traefik.http.routers.guacamole.rule=Host(`guacamole.mcleut.de`)
-      - traefik.http.routers.guacamole_secure.rule=Host(`guacamole.mcleut.de`)
-      - traefik.http.services.guacamole.loadbalancer.server.port=8080
-      - traefik.http.routers.guacamole_secure.middlewares=auth
-      - traefik.http.routers.guacamole_secure.tls.certresolver=default
-    image: guacamole/guacamole:latest
+      - traefik.http.routers.instapy.middlewares=redirectscheme
+      - traefik.http.routers.instapy.rule=Host(`insta.mcleut.de`)
+      - traefik.http.routers.instapy_secure.rule=Host(`insta.mcleut.de`)
+      - traefik.http.services.instapy.loadbalancer.server.port=80
+      - traefik.http.routers.instapy_secure.middlewares=auth
+      - traefik.http.routers.instapy_secure.tls.certresolver=default
+    image: instapy/instapy:latest
+    volumes:
+    - /etc/timezone:/etc/timezone:ro
+    - /etc/localtime:/etc/localtime:ro
+    - /production/instapy_data/docker_quickstart.py:/code/docker_quickstart.py
+    - /production/instapy_data/code:/code
+  irc:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.irc.middlewares=redirectscheme
+      - traefik.http.routers.irc.rule=Host(`irc.mcleut.de`)
+      - traefik.http.routers.irc_secure.rule=Host(`irc.mcleut.de`)
+      - traefik.http.services.irc.loadbalancer.server.port=9000
+      - traefik.http.routers.irc_secure.middlewares=auth
+      - traefik.http.routers.irc_secure.tls.certresolver=default
+    image: thelounge/thelounge:latest
+    volumes:
+    - /production/irc_data:/var/opt/thelounge:rw
+
+  jdownloader:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.jdownloader.middlewares=redirectscheme
+      - traefik.http.routers.jdownloader.rule=Host(`jdownloader.mcleut.de`)
+      - traefik.http.routers.jdownloader_secure.rule=Host(`jdownloader.mcleut.de`)
+      - traefik.http.services.jdownloader.loadbalancer.server.port=5800
+      - traefik.http.routers.jdownloader_secure.middlewares=auth
+      - traefik.http.routers.jdownloader_secure.tls.certresolver=default
+    image: jlesage/jdownloader-2:latest
+    volumes:
+    - /production/jdownloader_data/config:/config:rw
+    - /production/jdownloader_data/downloads:/output:rw
 
   mariadb:
     deploy:
@@ -630,6 +737,7 @@ services:
       - traefik.http.routers.resilio.rule=Host(`resilio.mcleut.de`)
       - traefik.http.routers.resilio_secure.rule=Host(`resilio.mcleut.de`)
       - traefik.http.services.resilio.loadbalancer.server.port=8888
+      - traefik.http.routers.resilio_secure.middlewares=auth
       - traefik.http.routers.resilio_secure.tls.certresolver=default
     image: resilio/sync:latest 
     volumes:
@@ -648,17 +756,43 @@ services:
       - traefik.http.routers.ssh_secure.tls.certresolver=default
     image: niruix/sshwifty:latest
 
-#  rocketchat:
-#    deploy:
-#      labels:
-#      - traefik.enable=true
-#      - traefik.http.routers.rocketchat.middlewares=redirectscheme
-#      - traefik.http.routers.rocketchat.rule=Host(`rocketchat.mcleut.de`)
-#      - traefik.http.routers.rocketchat_secure.rule=Host(`rocketchat.mcleut.de`)
-#      - traefik.http.services.rocketchat.loadbalancer.server.port=3000
-#      - traefik.http.routers.rocketchat_secure.middlewares=auth
-#      - traefik.http.routers.rocketchat_secure.tls.certresolver=default
-#    image: rocketchat/rocket.chat:latest
+  strapi:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.strapi.middlewares=redirectscheme
+      - traefik.http.routers.strapi.rule=Host(`strapi.mcleut.de`)
+      - traefik.http.routers.strapi_secure.rule=Host(`strapi.mcleut.de`)
+      - traefik.http.services.strapi.loadbalancer.server.port=1337
+      - traefik.http.routers.strapi_secure.middlewares=auth
+      - traefik.http.routers.strapi_secure.tls.certresolver=default
+    image: strapi/strapi:latest
+    depends_on:
+    - strapi_db
+    environment:
+      DATABASE_CLIENT: mongo
+      DATABASE_NAME: strapi_db
+      DATABASE_HOST: strapi_db
+      DATABASE_PORT: 27017
+      DATABASE_USERNAME: strapi_db
+      DATABASE_PASSWORD: strapi_db
+      WORDPRESS_DB_PASSWORD: strapi_db
+    volumes:
+    - /production/strapi_data/srv/app
+
+  strapi_db:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.strapi_db.entrypoints=strapi_db
+      - traefik.tcp.routers.strapi_db.service=strapi_db-svc
+      - traefik.tcp.services.srapi_db-svc.loadbalancer.server.port=27017
+    image: mongo:latest
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: strapi_db
+      MONGO_INITDB_ROOT_PASSWORD: strapi_db
+    volumes:
+    - /production/strapi_db_data:/data/db
 
 #  speedtest:
 #    deploy:
@@ -681,12 +815,12 @@ services:
       - traefik.http.routers.syspass.rule=Host(`syspass.mcleut.de`)
       - traefik.http.routers.syspass_secure.rule=Host(`syspass.mcleut.de`)
       - traefik.http.services.syspass.loadbalancer.server.port=80
-#      - traefik.http.routers.syspass_secure.middlewares=auth
+      - traefik.http.routers.syspass_secure.middlewares=auth
       - traefik.http.routers.syspass_secure.tls.certresolver=default
-      image: syspass/syspass:latest
-      volumes: 
-      - /production/syspass_data/config:/var/www/html/sysPass/app/config
-      - /production/syspass_data/backup:/var/www/html/sysPass/app/backup
+    image: syspass/syspass:latest
+    volumes: 
+    - /production/syspass_data/config:/var/www/html/sysPass/app/config
+    - /production/syspass_data/backup:/var/www/html/sysPass/app/backup
 
   theia:
     deploy:
@@ -696,7 +830,7 @@ services:
       - traefik.http.routers.theia.rule=Host(`theia.mcleut.de`)
       - traefik.http.routers.theia_secure.rule=Host(`theia.mcleut.de`)
       - traefik.http.services.theia.loadbalancer.server.port=3000
-#      - traefik.http.routers.theia_secure.middlewares=auth
+      - traefik.http.routers.theia_secure.middlewares=auth
       - traefik.http.routers.theia_secure.tls.certresolver=default
     image: theiaide/theia:latest
     volumes:
@@ -804,10 +938,13 @@ services:
 version: "3.7"
 volumes:
   0bin_data: {}
+  0bin_cjd_data: {}
   acme_data: {}
   bhd_data: {}
   bitwarden_data: {}
   caddy_data: {}
+  chat_data: {}
+  chat_db_data: {}
   checkmk_data: {}
   cloudtorrent_data: {}
   codimd_data: {}
@@ -816,6 +953,9 @@ volumes:
   fail2ban_data: {}
   gitea_data: {}
   gitpod_data: {}
+  instapy_data: {}
+  irc_data: {}
+  jdownloader_data: {}
   kali_data: {}
   mariadb_data: {}
   netdata_data: {}
@@ -834,6 +974,9 @@ volumes:
   rclone_data: {}
   resilio_data: {}
   speedtest_data: {}
+  strapi_data: {}
+  strapi_db_data: {}
+  syspass_data: {}
   theia_data: {}
   wp_data: {}
   wp_db_data: {}
