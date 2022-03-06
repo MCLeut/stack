@@ -102,6 +102,42 @@ services:
     - /etc/timezone:/etc/timezone:ro 
     - /production/bitwarden_data:/data
 
+  board:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.board.middlewares=redirectscheme
+      - traefik.http.routers.board.rule=Host(`baord.mcleut.de`)
+      - traefik.http.routers.board_secure.rule=Host(`board.mcleut.de`)      
+      - traefik.http.services.board.loadbalancer.server.port=8080
+      - traefik.http.routers.board_secure.middlewares=auth
+      - traefik.http.routers.board_secure.tls.certresolver=default
+    image: wekanteam/wekan:latest
+    depends_on:
+      - board_db
+    environment:
+      - MONGO_URL=mongodb://board_db:27017/wekan
+      - ROOT_URL=https://board.mcleut.de
+      - BROWSER_POLICY_ENABLED=true 
+      - WRITABLE_PATH=/data
+      - WITH_API=true
+    volumes:
+    - /production/board_data:/data
+    - /etc/localtime:/etc/localtime:ro
+
+  board_db:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.board_db.entrypoints=strapi_db
+      - traefik.tcp.routers.board_db.service=strapi_db-svc
+      - traefik.tcp.services.board_db-svc.loadbalancer.server.port=27017
+    image: mongo:latest
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - /etc/timezone:/etc/timezone:ro
+    - /production/board_db_data:/data/db
+
   caddy_me:
     deploy:
       labels:
@@ -125,29 +161,112 @@ services:
       - traefik.http.routers.caddy.rule=Host(`mcleut.de`)
       - traefik.http.routers.caddy_secure.rule=Host(`mcleut.de`)      
       - traefik.http.services.caddy.loadbalancer.server.port=80
-      - traefik.http.routers.caddy_secure.middlewares=auth
+#      - traefik.http.routers.caddy_secure.middlewares=auth
       - traefik.http.routers.caddy_secure.tls.certresolver=default
     image: caddy:latest    
     volumes:
     - /production/caddy_data:/data
     - /production/business_me:/usr/share/caddy:ro
 
-  cadvisor:
+#  cadvisor:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.cadvisor.middlewares=redirectscheme
+#      - traefik.http.routers.cadvisor.rule=Host(`cadvisor.mcleut.de`)
+#      - traefik.http.routers.cadvisor_secure.rule=Host(`cadvisor.mcleut.de`)      
+#      - traefik.http.services.cadvisor.loadbalancer.server.port=8080
+#      - traefik.http.routers.cadvisor_secure.middlewares=auth
+#      - traefik.http.routers.cadvisor_secure.tls.certresolver=default        
+#    image: gcr.io/google-containers/cadvisor@sha256:16bc6858dc5b7063c7d89153ad6544370eb79cb27a1b8d571f31b98673f7a324
+#    volumes:
+#    - /:/rootfs:ro
+#    - /var/run:/var/run:rw
+#    - /sys:/sys:ro
+#    - /var/lib/docker/:/var/lib/docker:ro
+
+  calc:
     deploy:
       labels:
       - traefik.enable=true
-      - traefik.http.routers.cadvisor.middlewares=redirectscheme
-      - traefik.http.routers.cadvisor.rule=Host(`cadvisor.mcleut.de`)
-      - traefik.http.routers.cadvisor_secure.rule=Host(`cadvisor.mcleut.de`)      
-      - traefik.http.services.cadvisor.loadbalancer.server.port=8080
-      - traefik.http.routers.cadvisor_secure.middlewares=auth
-      - traefik.http.routers.cadvisor_secure.tls.certresolver=default        
-    image: gcr.io/google-containers/cadvisor@sha256:16bc6858dc5b7063c7d89153ad6544370eb79cb27a1b8d571f31b98673f7a324
+      - traefik.http.routers.calc.middlewares=redirectscheme
+      - traefik.http.routers.calc.rule=Host(`calc.mcleut.de`)
+      - traefik.http.routers.calc_secure.rule=Host(`calc.mcleut.de`)
+      - traefik.http.services.calc.loadbalancer.server.port=8000
+      - traefik.http.routers.calc_secure.middlewares=auth
+      - traefik.http.routers.calc_secure.tls.certresolver=default
+    image: audreyt/ethercalc:latest
+#    environment:
+#      - REDIS_PORT_6379_TCP_ADDR=calc_redis
+#      - REDIS_PORT_6379_TCP_PORT=6379
+
+  calc_redis:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.calc_redis.entrypoints=calc_redis
+      - traefik.tcp.routers.calc_redis.service=calc_redis-svc
+      - traefik.tcp.services.calc_redis-svc.loadbalancer.server.port=6379
+    image: redis:latest
+
+  campus_db:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.campus_db.entrypoints=campus_db
+      - traefik.tcp.routers.campus_db.service=campus_db-svc
+      - traefik.tcp.services.campus_db-svc.loadbalancer.server.port=3306
+    image: bitnami/mariadb:10.3
+    environment:
+      - ALLOW_EMPTY_PASSWORD=no
+      - MARIADB_USER=campus_db
+      - MARIADB_HOST=campus_db
+      - MARIADB_PORT_NUMBER=3306
+      - MARIADB_PASSWORD=campus_db
+      - MARIADB_DATABASE=campus_db
+      - MARIADB_ROOT_PASSWORD=campus_db
+      - MARIADB_CHARACTER_SET=utf8mb4
+      - MARIADB_COLLATE=utf8mb4_unicode_ci
     volumes:
-    - /:/rootfs:ro
-    - /var/run:/var/run:rw
-    - /sys:/sys:ro
-    - /var/lib/docker/:/var/lib/docker:ro
+    - /production/campus_db_data:/bitnami/mariadb
+
+  campus:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.campus.middlewares=redirectscheme
+      - traefik.http.routers.campus.rule=Host(`campus.mcleut.de`)
+      - traefik.http.routers.campus_secure.rule=Host(`campus.mcleut.de`)
+      - traefik.http.services.campus.loadbalancer.server.port=8080
+#      - traefik.http.routers.campus_secure.middlewares=auth
+      - traefik.http.routers.campus_secure.tls.certresolver=default
+    image: bitnami/moodle:latest
+    depends_on:
+      - campus_db
+    environment:
+      - BITNAMI_DEBUG=true
+      - ALLOW_EMPTY_PASSWORD=no
+      - MARIADB_HOST=campus_db
+      - MARIADB_PORT_NUMBER=3306
+      - MARIADB_ROOT_PASSWORD=campus_db
+      - MOODLE_DATABASE_HOST=campus_db
+      - MOODLE_DATABASE_TYPE=mariadb
+      - MOODLE_DATABASE_PORT_NUMBER=3306
+      - MOODLE_DATABASE_USER=campus_db
+      - MOODLE_DATABASE_PASSWORD=campus_db
+      - MOODLE_DATABASE_NAME=campus_db
+      - MOODLE_USERNAME=christopher
+      - MOODLE_PASSWORD=leuthardt
+      - MOODLE_SITE_NAME=Campus
+      - MOODLE_EMAIL=christopher.leuthardt@tutanota.de
+      - PHP_ENABLE_OPCACHE=yes
+      - PHP_MEMORY_LIMIT=1024M
+    volumes:
+    - /production/campus_data:/bitnami/moodle
+    - /production/campus_data_data:/bitnami/moodledata
+    - /production/campus_data_apache:/bitnami/apache
+    - /production/campus_data_php:/bitnami/php
+#    - /production/campus_data_opt:/opt/bitnami
 
   chat:
     deploy:
@@ -163,14 +282,10 @@ services:
     depends_on:
     - chat_db
     environment:
-      DATABASE_CLIENT: mongo
-      DATABASE_NAME: chat_db
-      DATABASE_HOST: chat_db
-      DATABASE_PORT: 27017
-      DATABASE_USERNAME: chat_db
-      DATABASE_PASSWORD: chat_db
-      MONGO_URL: mongodb://mongo:27017/rocketchat
-      MONGO_OPLOG_URL: mongodb://mongo:27017/local
+      - PORT=3000
+      - DATABASE_CLIENT: mongo
+      - MONGO_URL: mongodb://mongo:27017/rocketchat
+      - MONGO_OPLOG_URL: mongodb://mongo:27017/local
     volumes:
     - /production/chat_data:/app/uploads
 
@@ -188,20 +303,72 @@ services:
     volumes:
     - /production/chat_db_data:/data/db
 
-  checkmk:
-    deploy:
-      labels:
-      - traefik.enable=true
-      - traefik.http.routers.checkmk.middlewares=redirectscheme
-      - traefik.http.routers.checkmk.rule=Host(`checkmk.mcleut.de`)
-      - traefik.http.routers.checkmk_secure.rule=Host(`checkmk.mcleut.de`)
-      - traefik.http.services.checkmk.loadbalancer.server.port=5000
-      - traefik.http.routers.checkmk_secure.middlewares=auth
-      - traefik.http.routers.checkmk_secure.tls.certresolver=default
-    image: checkmk/check-mk-raw:1.6.0-latest
-    volumes:
-    - /production/checkmk_data:/omd/sites
-    - /etc/localtime:/etc/localtime:ro
+#  checkmk:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.checkmk.middlewares=redirectscheme
+#      - traefik.http.routers.checkmk.rule=Host(`checkmk.mcleut.de`)
+#      - traefik.http.routers.checkmk_secure.rule=Host(`checkmk.mcleut.de`)
+#      - traefik.http.services.checkmk.loadbalancer.server.port=5000
+#      - traefik.http.routers.checkmk_secure.middlewares=auth
+#      - traefik.http.routers.checkmk_secure.tls.certresolver=default
+#    image: checkmk/check-mk-raw:1.6.0-latest
+#    volumes:
+#    - /production/checkmk_data:/omd/sites
+#    - /etc/localtime:/etc/localtime:ro
+
+#  cloud:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.http.middlewares.cloud_secure_redirectregex_calendar.redirectregex.regex=.*
+#      - traefik.http.middlewares.cloud_secure_redirectregex_calendar.redirectregex.replacement=https://cloud.mcleut.de/apps/calendar/
+#      - traefik.http.middlewares.cloud_secure_redirectregex_contacts.redirectregex.regex=.*
+#      - traefik.http.middlewares.cloud_secure_redirectregex_contacts.redirectregex.replacement=https://cloud.mcleut.de/apps/contacts/
+#      - traefik.http.middlewares.cloud_secure_redirectregex_office.redirectregex.regex=.*
+#      - traefik.http.middlewares.cloud_secure_redirectregex_office.redirectregex.replacement=https://cloud.mcleut.de/apps/collabora/
+#      - traefik.http.routers.cloud.middlewares=redirectscheme
+#      - traefik.http.routers.cloud.rule=Host(`cloud.mcleut.de`)
+#      - traefik.http.routers.cloud_secure.rule=Host(`cloud.mcleut.de`)
+#      - traefik.http.routers.cloud_secure_calendar.middlewares=cloud_secure_redirectregex_calendar@docker
+#      - traefik.http.routers.cloud_secure_calendar.rule=Host(`calendar.mcleut.de`)
+#      - traefik.http.routers.cloud_secure_contacts.middlewares=cloud_secure_redirectregex_contacts@docker
+#      - traefik.http.routers.cloud_secure_contacts.rule=Host(`contacts.mcleut.de`)
+#      - traefik.http.routers.cloud_secure_office.middlewares=cloud_secure_redirectregex_office@docker
+#      - traefik.http.routers.cloud_secure_office.rule=Host(`office.mcleut.de`)
+#      - traefik.http.services.cloud.loadbalancer.server.port=443
+#      - traefik.http.services.cloud.loadbalancer.server.scheme=https
+#      - traefik.http.routers.cloud_secure.tls.certresolver=default
+#    image: linuxserver/nextcloud:23.0.2
+#    environment:
+#      - PUID=1000
+#      - PGID=1000
+#      - TZ=Europe/Berlin
+#    volumes:
+#    - /production/cloud_data/data:/data
+#    - /production/cloud_data/config:/config
+#    depends_on:
+#      - cloud_db
+
+#  cloud_db:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.tcp.routers.cloud_db.entrypoints=wp_db
+#      - traefik.tcp.routers.cloud_db.service=wp_db-svc
+#      - traefik.tcp.services.cloud_db-svc.loadbalancer.server.port=3306
+#    image: ghcr.io/linuxserver/mariadb
+#    environment:
+#      - PUID=1000
+#      - PGID=1000
+#      - MYSQL_ROOT_PASSWORD=mariadbpassword
+#      - MYSQL_DATABASE=nextcloud
+#      - MYSQL_USER=admin
+#      - MYSQL_PASSWORD=Tue@Z4eN2
+#      - TZ=Europe/Berlin
+#    volumes:
+#    - /production/cloud_db_data:/config
 
   cloudtorrent:
     deploy:
@@ -232,30 +399,58 @@ services:
     - /production/codimd_data:/config
     - /etc/localtime:/etc/localtime:ro
 
-  collabora:
+#  collabora:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.collabora.middlewares=redirectscheme
+#      - traefik.http.routers.collabora.rule=Host(`office.mcleut.de`)
+#      - traefik.http.routers.collabora_secure.rule=Host(`office.mcleut.de`)
+#      - traefik.http.services.collabora.loadbalancer.server.port=9980
+#      - traefik.http.routers.collabora_secure.middlewares=auth
+#      - traefik.http.routers.collabora_secure.tls.certresolver=default
+#    cap_add:
+#      - MKNOD
+#    image: collabora/code:latest
+#    environment:
+#      - dictionaries = 'en de'
+#      - username = test
+#      - password = test
+#      - VIRTUAL_HOST = office.mcleut.de
+#      - SLEEPFORDEBUGGER = 0
+#      - VIRTUAL_PROTO = https
+#      - MKNOD
+#    volumes:
+#    - /production/collabora_data:/data
+
+  cyber:
     deploy:
       labels:
       - traefik.enable=true
-      - traefik.http.routers.collabora.middlewares=redirectscheme
-      - traefik.http.routers.collabora.rule=Host(`office.mcleut.de`)
-      - traefik.http.routers.collabora_secure.rule=Host(`office.mcleut.de`)
-      - traefik.http.services.collabora.loadbalancer.server.port=9980
-      - traefik.http.routers.collabora_secure.middlewares=auth
-      - traefik.http.routers.collabora_secure.tls.certresolver=default
-    cap_add:
-      - MKNOD
-    image: collabora/code:latest
-    environment:
-      - dictionaries = 'en de'
-      - username = test
-      - password = test
-      - VIRTUAL_HOST = office.mcleut.de
-      - SLEEPFORDEBUGGER = 0
-      - VIRTUAL_PROTO = https
-      - MKNOD
-    volumes:
-    - /production/collabora_data:/data
+      - traefik.http.routers.cyber.middlewares=redirectscheme
+      - traefik.http.routers.cyber.rule=Host(`cyber.mcleut.de`)
+      - traefik.http.routers.cyber_secure.rule=Host(`cyber.mcleut.de`)
+      - traefik.http.services.cyber.loadbalancer.server.port=8000
+      - traefik.http.routers.cyber_secure.middlewares=auth
+      - traefik.http.routers.cyber_secure.tls.certresolver=default
 
+    image: mpepping/cyberchef:latest
+
+  docs:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.docs.middlewares=redirectscheme
+      - traefik.http.routers.docs.rule=Host(`docs.mcleut.de`)
+      - traefik.http.routers.docs_secure.rule=Host(`docs.mcleut.de`)
+      - traefik.http.services.docs.loadbalancer.server.port=8000
+#      - traefik.http.routers.docs_secure.middlewares=auth
+      - traefik.http.routers.docs_secure.tls.certresolver=default
+    image: lscr.io/linuxserver/paperless-ng
+    volumes:
+    - /production/docs_data/data:/data
+    - /production/docs_data/config:/config
+  
   fail2ban:
     deploy:
       labels:
@@ -382,6 +577,19 @@ services:
     - /production/jdownloader_data/config:/config:rw
     - /production/jdownloader_data/downloads:/output:rw
 
+  kuma:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.kuma.middlewares=redirectscheme
+      - traefik.http.routers.kuma.rule=Host(`kuma.mcleut.de`)
+      - traefik.http.routers.kuma_secure.rule=Host(`kuma.mcleut.de`)
+      - traefik.http.services.kuma.loadbalancer.server.port=3001
+      - traefik.http.routers.kuma_secure.tls.certresolver=default
+    image: louislam/uptime-kuma:latest
+    volumes:
+    - /production/kuma_data:/app/data
+
   mariadb:
     deploy:
       labels:
@@ -399,31 +607,31 @@ services:
     volumes:
     - /production/mariadb_data:/var/lib/mysql
   
-  netdata:
-    deploy:
-      labels:
-      - traefik.enable=true
-      - traefik.http.routers.netdata.middlewares=redirectscheme
-      - traefik.http.routers.netdata.rule=Host(`netdata.mcleut.de`)
-      - traefik.http.routers.netdata_secure.rule=Host(`netdata.mcleut.de`)      
-      - traefik.http.services.netdata.loadbalancer.server.port=19999
-      - traefik.http.routers.netdata_secure.middlewares=auth
-      - traefik.http.routers.netdata_secure.tls.certresolver=default
-    cap_add:
-      - SYS_PTRACE
-    security_opt:
-      - apparmor:unconfined
-    image: netdata/netdata:latest
-    volumes:
-    - /production/netdata_data/config/netdata:/etc/netdata
-    - /production/netdata_data/lib/netdata:/var/lib/netdata  
-    - /production/netdata_data/cache/netdata:/var/cache/netdata
-    - /etc/passwd:/host/etc/passwd:ro
-    - /etc/group:/host/etc/group:ro
-    - /proc:/host/proc:ro
-    - /sys:/host/sys:ro
-    - /etc/os-release:/host/etc/os-release:ro
-    - /var/run/docker.sock:/var/run/docker.sock:ro
+#  netdata:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.netdata.middlewares=redirectscheme
+#      - traefik.http.routers.netdata.rule=Host(`netdata.mcleut.de`)
+#      - traefik.http.routers.netdata_secure.rule=Host(`netdata.mcleut.de`)      
+#      - traefik.http.services.netdata.loadbalancer.server.port=19999
+#      - traefik.http.routers.netdata_secure.middlewares=auth
+#      - traefik.http.routers.netdata_secure.tls.certresolver=default
+#    cap_add:
+#      - SYS_PTRACE
+#    security_opt:
+#      - apparmor:unconfined
+#    image: netdata/netdata:latest
+#    volumes:
+#    - /production/netdata_data/config/netdata:/etc/netdata
+#    - /production/netdata_data/lib/netdata:/var/lib/netdata  
+#    - /production/netdata_data/cache/netdata:/var/cache/netdata
+#    - /etc/passwd:/host/etc/passwd:ro
+#    - /etc/group:/host/etc/group:ro
+#    - /proc:/host/proc:ro
+#    - /sys:/host/sys:ro
+#    - /etc/os-release:/host/etc/os-release:ro
+#    - /var/run/docker.sock:/var/run/docker.sock:ro
 
   nextmap_caddy:
     deploy:
@@ -474,27 +682,18 @@ services:
     - /production/nextmap:/var/www/html
 
   nextcloud:
-    env_file: ./nextcloud.env
-    image: nextcloud:20.0.6-fpm-alpine
-    secrets:
-    - nextcloud_admin-password
-    - nextcloud_admin-user
-    volumes:
-    - /production/nextcloud_data:/var/www/html
-
-  nextcloud_nginx:
     deploy:
       labels:
       - traefik.enable=true
       - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_calendar.redirectregex.regex=.*
-      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_calendar.redirectregex.replacement=https://nextcloud.mcleut.de/apps/calendar/
+      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_calendar.redirectregex.replacement=https://cloud.mcleut.de/apps/calendar/
       - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_contacts.redirectregex.regex=.*
-      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_contacts.redirectregex.replacement=https://nextcloud.mcleut.de/apps/contacts/
+      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_contacts.redirectregex.replacement=https://cloud.mcleut.de/apps/contacts/
       - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_office.redirectregex.regex=.*
-      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_office.redirectregex.replacement=https://nextcloud.mcleut.de/apps/collabora/
+      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_office.redirectregex.replacement=https://cloud.mcleut.de/apps/collabora/
       - traefik.http.routers.nextcloud_nginx.middlewares=redirectscheme
-      - traefik.http.routers.nextcloud_nginx.rule=Host(`nextcloud.mcleut.de`)
-      - traefik.http.routers.nextcloud_nginx_secure.rule=Host(`nextcloud.mcleut.de`)
+      - traefik.http.routers.nextcloud_nginx.rule=Host(`cloud.mcleut.de`)
+      - traefik.http.routers.nextcloud_nginx_secure.rule=Host(`cloud.mcleut.de`)
       - traefik.http.routers.nextcloud_nginx_secure_calendar.middlewares=nextcloud_nginx_secure_redirectregex_calendar@docker
       - traefik.http.routers.nextcloud_nginx_secure_calendar.rule=Host(`calendar.mcleut.de`)
       - traefik.http.routers.nextcloud_nginx_secure_contacts.middlewares=nextcloud_nginx_secure_redirectregex_contacts@docker
@@ -503,10 +702,73 @@ services:
       - traefik.http.routers.nextcloud_nginx_secure_office.rule=Host(`office.mcleut.de`)
       - traefik.http.services.nextcloud_nginx.loadbalancer.server.port=80
       - traefik.http.routers.nextcloud_nginx_secure.tls.certresolver=default
-    image: nginx:1.19.6-alpine
+    env_file: ./nextcloud.env
+    image: nextcloud:23.0.2-apache
+    environment:
+      - REDIS_HOST=nextcloud_redis
+    secrets:
+    - nextcloud_admin-password
+    - nextcloud_admin-user
     volumes:
-    - /production/nextcloud-nginx.conf:/etc/nginx/nginx.conf
-    - /production/nextcloud_data:/var/www/html/
+    - /production/nextcloud_data:/var/www/html
+
+  nextcloud_db:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.nextcloud_db.entrypoints=nextcloud_db
+      - traefik.tcp.routers.nextcloud_db.service=nextcloud_db-svc
+      - traefik.tcp.services.nextcloud_db-svc.loadbalancer.server.port=3306
+    image: mariadb:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: eNkj8?70
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: eNkj8?70
+    volumes:
+    - /production/nextcloud_db_data:/var/lib/mysql
+
+  nextcloud_redis:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.nextcloud_redis.entrypoints=nextcloud_redis
+      - traefik.tcp.routers.nextcloud_redis.service=nextcloud_redis-svc
+      - traefik.tcp.services.nextcloud_redis-svc.loadbalancer.server.port=6379
+    image: redis:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: eNkj8?70
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: eNkj8?70
+    volumes:
+    - /production/nextcloud_redis_data:/var/lib/redis
+
+#  nextcloud_nginx:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_calendar.redirectregex.regex=.*
+#      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_calendar.redirectregex.replacement=https://nextcloud.mcleut.de/apps/calendar/
+#      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_contacts.redirectregex.regex=.*
+#      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_contacts.redirectregex.replacement=https://nextcloud.mcleut.de/apps/contacts/
+#      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_office.redirectregex.regex=.*
+#      - traefik.http.middlewares.nextcloud_nginx_secure_redirectregex_office.redirectregex.replacement=https://nextcloud.mcleut.de/apps/collabora/
+#      - traefik.http.routers.nextcloud_nginx.middlewares=redirectscheme
+#      - traefik.http.routers.nextcloud_nginx.rule=Host(`nextcloud.mcleut.de`)
+#      - traefik.http.routers.nextcloud_nginx_secure.rule=Host(`nextcloud.mcleut.de`)
+#      - traefik.http.routers.nextcloud_nginx_secure_calendar.middlewares=nextcloud_nginx_secure_redirectregex_calendar@docker
+#      - traefik.http.routers.nextcloud_nginx_secure_calendar.rule=Host(`calendar.mcleut.de`)
+#      - traefik.http.routers.nextcloud_nginx_secure_contacts.middlewares=nextcloud_nginx_secure_redirectregex_contacts@docker
+#      - traefik.http.routers.nextcloud_nginx_secure_contacts.rule=Host(`contacts.mcleut.de`)
+#      - traefik.http.routers.nextcloud_nginx_secure_office.middlewares=nextcloud_nginx_secure_redirectregex_office@docker
+#      - traefik.http.routers.nextcloud_nginx_secure_office.rule=Host(`office.mcleut.de`)
+#      - traefik.http.services.nextcloud_nginx.loadbalancer.server.port=80
+#      - traefik.http.routers.nextcloud_nginx_secure.tls.certresolver=default
+#    image: nginx:1.21.6-alpine
+#    volumes:
+#    - /production/nextcloud-nginx.conf:/etc/nginx/nginx.conf
+#    - /production/nextcloud_data:/var/www/html/
 
 #  nms:
 #    deploy:
@@ -536,21 +798,21 @@ services:
     volumes:
     - /production/kali_data:/home
 
-  ownphotos:
-    deploy:
-      labels:
-      - traefik.enable=true
-      - traefik.http.routers.ownphotos.middlewares=redirectscheme
-      - traefik.http.routers.ownphotos.rule=Host(`ownphotos.mcleut.de`)
-      - traefik.http.routers.ownphotos_secure.rule=Host(`ownphotos.mcleut.de`)
-      - traefik.http.services.ownphotos.loadbalancer.server.port=80
-      - traefik.http.routers.ownphotos_secure.middlewares=auth
-      - traefik.http.routers.ownphotos_secure.tls.certresolver=default
-    image: hooram/ownphotos:master
-    environment:
-      - ALLOWED_HOSTS=ownphotos.mcleut.de
-    volumes:
-    - /production/ownphotos_data/request.py:/venv/lib/python3.5/site-packages/django/http/request.py:ro
+#  ownphotos:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.ownphotos.middlewares=redirectscheme
+#      - traefik.http.routers.ownphotos.rule=Host(`ownphotos.mcleut.de`)
+#      - traefik.http.routers.ownphotos_secure.rule=Host(`ownphotos.mcleut.de`)
+#      - traefik.http.services.ownphotos.loadbalancer.server.port=80
+#      - traefik.http.routers.ownphotos_secure.middlewares=auth
+#      - traefik.http.routers.ownphotos_secure.tls.certresolver=default
+#    image: hooram/ownphotos:master
+#    environment:
+#      - ALLOWED_HOSTS=ownphotos.mcleut.de
+#    volumes:
+#    - /production/ownphotos_data/request.py:/venv/lib/python3.5/site-packages/django/http/request.py:ro
 #    - /production/ownphotos_data/miniconda:/miniconda 
 #    - /production/ownphotos_data/code:/code
 
@@ -562,35 +824,35 @@ services:
       - traefik.http.routers.pad.rule=Host(`pad.mcleut.de`)
       - traefik.http.routers.pad_secure.rule=Host(`pad.mcleut.de`)
       - traefik.http.services.pad.loadbalancer.server.port=9001
-      - traefik.http.routers.pad_secure.middlewares=auth
+#      - traefik.http.routers.pad_secure.middlewares=auth
       - traefik.http.routers.pad_secure.tls.certresolver=default
     image: etherpad/etherpad:latest
     volumes:
     - /production/pad_data:/data 
 
-  pihole:
-    deploy:
-      labels:
-      - traefik.enable=true
-      - traefik.http.routers.pihole.middlewares=redirectscheme
-      - traefik.http.routers.pihole.rule=Host(`pihole.mcleut.de`)
-      - traefik.http.routers.pihole.rule=Host(`pihole.mcleut.de`) && PathPrefix(`/admin`)
-      - traefik.http.routers.pihole_secure.rule=Host(`pihole.mcleut.de`)
-      - traefik.http.services.pihole.loadbalancer.server.port=80
-      - traefik.http.routers.pihole_secure.middlewares=auth
-      - traefik.http.routers.pihole_secure.tls.certresolver=default
-    image: pihole/pihole:latest
-    ports:
-      - 53:53/tcp
-      - 53:53/udp
-    environment:
-      TZ: 'Europe/Berlin'
- #     VIRTUAL_HOST: pihole.mcleut.de/admin
-    volumes:
-    - /production/pihole_data:/etc/pihole/
-    - /production/dnsmasq_data/:/etc/dnsmasq.d/
-    - /etc/localtime:/etc/localtime:ro
-    - /etc/timezone:/etc/timezone:ro
+#  pihole:
+#    deploy:
+#      labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.pihole.middlewares=redirectscheme
+#      - traefik.http.routers.pihole.rule=Host(`pihole.mcleut.de`)
+#      - traefik.http.routers.pihole.rule=Host(`pihole.mcleut.de`) && PathPrefix(`/admin`)
+#      - traefik.http.routers.pihole_secure.rule=Host(`pihole.mcleut.de`)
+#      - traefik.http.services.pihole.loadbalancer.server.port=80
+#      - traefik.http.routers.pihole_secure.middlewares=auth
+#      - traefik.http.routers.pihole_secure.tls.certresolver=default
+#    image: pihole/pihole:latest
+#    ports:
+#      - 53:53/tcp
+#      - 53:53/udp
+#    environment:
+#      TZ: 'Europe/Berlin'
+#      VIRTUAL_HOST: pihole.mcleut.de/admin
+#    volumes:
+#    - /production/pihole_data:/etc/pihole/
+#    - /production/dnsmasq_data/:/etc/dnsmasq.d/
+#    - /etc/localtime:/etc/localtime:ro
+#    - /etc/timezone:/etc/timezone:ro
 
   piwigo:
     deploy:
@@ -745,6 +1007,17 @@ services:
     - /etc/timezone:/etc/timezone:ro
     - /production/resilio_data:/sync
 
+  search:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.search.middlewares=redirectscheme
+      - traefik.http.routers.search.rule=Host(`search.mcleut.de`)
+      - traefik.http.routers.search_secure.rule=Host(`search.mcleut.de`)
+      - traefik.http.services.search.loadbalancer.server.port=5000
+      - traefik.http.routers.search_secure.tls.certresolver=default
+    image: benbusby/whoogle-search:latest
+
   ssh:
     deploy:
       labels:
@@ -755,6 +1028,22 @@ services:
       - traefik.http.services.ssh.loadbalancer.server.port=8182
       - traefik.http.routers.ssh_secure.tls.certresolver=default
     image: niruix/sshwifty:latest
+
+  start:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.start.middlewares=redirectscheme
+      - traefik.http.routers.start.rule=Host(`start.mcleut.de`)
+      - traefik.http.routers.start_secure.rule=Host(`start.mcleut.de`)
+      - traefik.http.services.start.loadbalancer.server.port=80
+      - traefik.http.routers.start_secure.middlewares=auth
+      - traefik.http.routers.start_secure.tls.certresolver=default
+    image: lissy93/dashy:latest
+    environment:
+      - NODE_ENV=production
+#    volumes:
+#    - /production/start_data/:/app/public/
 
   strapi:
     deploy:
@@ -778,7 +1067,7 @@ services:
       DATABASE_PASSWORD: strapi_db
       WORDPRESS_DB_PASSWORD: strapi_db
     volumes:
-    - /production/strapi_data/srv/app
+    - /production/strapi_data:/srv/app
 
   strapi_db:
     deploy:
@@ -786,7 +1075,7 @@ services:
       - traefik.enable=true
       - traefik.tcp.routers.strapi_db.entrypoints=strapi_db
       - traefik.tcp.routers.strapi_db.service=strapi_db-svc
-      - traefik.tcp.services.srapi_db-svc.loadbalancer.server.port=27017
+      - traefik.tcp.services.strapi_db-svc.loadbalancer.server.port=27017
     image: mongo:latest
     environment:
       MONGO_INITDB_ROOT_USERNAME: strapi_db
@@ -835,6 +1124,17 @@ services:
     image: theiaide/theia:latest
     volumes:
     - /production/theia_data:/home/project
+
+  torsearch:
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.http.routers.torsearch.middlewares=redirectscheme
+      - traefik.http.routers.torsearch.rule=Host(`torsearch.mcleut.de`)
+      - traefik.http.routers.torsearch_secure.rule=Host(`torsearch.mcleut.de`)
+      - traefik.http.services.torsearch.loadbalancer.server.port=5000
+      - traefik.http.routers.torsearch_secure.tls.certresolver=default
+    image: benbusby/whoogle-search:latest
 
   traefik:
     command:
@@ -941,15 +1241,26 @@ volumes:
   0bin_cjd_data: {}
   acme_data: {}
   bhd_data: {}
+  board_data: {}
+  board_db_data: {}
   bitwarden_data: {}
   caddy_data: {}
+  campus_data: {}
+  campus_data_apache: {}
+  campus_data_php: {}
+  campus_data_opt: {}
+  campus_data_data: {}
+  campus_db_data: {}
   chat_data: {}
   chat_db_data: {}
   checkmk_data: {}
+  cloud_data: {}
+  cloud_db_data: {}
   cloudtorrent_data: {}
   codimd_data: {}
   collabora_data: {}
   dnsmasq_data: {}
+  docs_data: {}
   fail2ban_data: {}
   gitea_data: {}
   gitpod_data: {}
@@ -957,9 +1268,12 @@ volumes:
   irc_data: {}
   jdownloader_data: {}
   kali_data: {}
+  kuma_data: {}
   mariadb_data: {}
   netdata_data: {}
   nextcloud_data: {}
+  nextcloud_db_data: {}
+  nextcloud_redis_data: {}
   nextmap_caddy_data: {}
   nextmap_maria_data: {}
   ownphotos_data: {}
@@ -974,6 +1288,7 @@ volumes:
   rclone_data: {}
   resilio_data: {}
   speedtest_data: {}
+  start_data: {}
   strapi_data: {}
   strapi_db_data: {}
   syspass_data: {}
